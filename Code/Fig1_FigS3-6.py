@@ -31,6 +31,10 @@ import statsmodels.api as sm
 
 ############# User inputs here #############
 Country = 'Wales'
+inputs_dir = "/scratch/cburton/scratch/FWI/2022/"
+outputs_dat_dir = "/data/dynamic/dkelley/UK-2022-Fire-Attribution/datFiles/"
+outputs_dir = '/data/dynamic/dkelley/UK-2022-Fire-Attribution/outputs/'
+ERA5_reanalysis_file = '/scratch/cburton/impactstoolbox/Data/era5/Fire-Weather/FWI-2-day/FWI-2-day_ERA5_std_reanalysis_2022-06-01-2022-08-31_-9.0.50.0.2.0.59.0_day_initialise-from-copernicus:True-and-use-numpy=False.nc'
 # Options: 'United Kingdom', 'England', 'Wales', 'Scotland', 'Northern Ireland'
 ############# User inputs end here #############
 
@@ -41,7 +45,7 @@ if Country == 'United Kingdom' or Country == 'England' or Country == 'Scotland' 
     daterange = iris.Constraint(time=lambda cell: 6<= cell.point.month <=8)
     month = 'JJA'
     percentile = 90
-    ERA5_2022 = iris.load_cube('/scratch/cburton/impactstoolbox/Data/era5/Fire-Weather/FWI-2-day/FWI-2-day_ERA5_std_reanalysis_2022-06-01-2022-08-31_-9.0.50.0.2.0.59.0_day_initialise-from-copernicus:True-and-use-numpy=False.nc')
+    ERA5_2022 = iris.load_cube(ERA5_reanalysis_file)
 
 
 ### Functions
@@ -106,14 +110,14 @@ def TimePercentile(cube, percentile):
 
 
 #############  Subplot (a) - Historical PDF uncorrected ######### 
-'''
+
 ### Make the .dat files first ###
 
 # ERA5 from toolbox
 ERA5_ImpactsToolBox_Arr = []
 for year in np.arange(1960, 2014):
     print('ERA5',year)
-    ERA5_ImpactsToolBox = iris.load_cube('/scratch/cburton/scratch/FWI/2022/ERA5/FWI_ccra3_'+str(year)+'.nc')
+    ERA5_ImpactsToolBox = iris.load_cube(inputs_dir + 'ERA5/FWI_ccra3_'+str(year)+'.nc')
     ERA5_ImpactsToolBox = ERA5_ImpactsToolBox.extract(daterange)
     ERA5_ImpactsToolBox = TimePercentile(ERA5_ImpactsToolBox, percentile)
     ERA5_ImpactsToolBox = CountryConstrain(ERA5_ImpactsToolBox, Country)
@@ -123,7 +127,7 @@ for year in np.arange(1960, 2014):
     print(ERA5_ImpactsToolBox)
 
 #Save ERA5 text out to a file
-f = open('/scratch/cburton/scratch/FWI/2022/ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat','a')
+f = open(outputs_dat_dir + '/ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat','a')
 np.savetxt(f,(ERA5_ImpactsToolBox_Arr))
 f.close()    
 exit()
@@ -135,7 +139,7 @@ for member in members:
     HadGEM3_Arr = []
     for year in np.arange(1960, 2014):
         print('HadGEM',member,year)
-        HadGEM3 = iris.load_cube('/scratch/cburton/scratch/FWI/2022/historical/1960-2013/FWI_'+member+'.nc')
+        HadGEM3 = iris.load_cube(inputs_dir + 'historical/1960-2013/FWI_'+member+'.nc')
         print(HadGEM3)
         if HadGEM3 == None:
             pass
@@ -161,15 +165,15 @@ for member in members:
 
 
     #Save HadGEM3 text out to a file
-    f = open('/scratch/cburton/scratch/FWI/2022/historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat','a')
+    f = open(outputs_dat_dir + 'historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat','a')
     np.savetxt(f,(HadGEM3_Arr))
     f.close()  
 
 exit()
 
-'''
+
 ### Read the .dat files  ###
-ERA5_ImpactsToolBox_File = ('/scratch/cburton/scratch/FWI/2022/ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat')
+ERA5_ImpactsToolBox_File = (outputs_dat_dir + 'ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat')
 data = []
 with open(ERA5_ImpactsToolBox_File, 'r') as f:
     d = f.readlines()
@@ -180,7 +184,7 @@ ERA5_ImpactsToolBox_Arr = np.array(data, dtype='O')
 members = ('aojaa', 'aojab', 'aojac', 'aojad', 'aojae', 'aojaf', 'aojag', 'aojah', 'aojai', 'aojaj', 'dlrja', 'dlrjb', 'dlrjc', 'dlrjd', 'dlrje')
 data = []
 for member in members:
-    HadGEM3_File = ('/scratch/cburton/scratch/FWI/2022/historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat')
+    HadGEM3_File = (outputs_dat_dir + 'historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat')
     with open(HadGEM3_File, 'r') as f:
          d = f.readlines()
          for i in d:
@@ -225,8 +229,8 @@ members = ('aojaa', 'aojab', 'aojac', 'aojad', 'aojae', 'aojaf', 'aojag', 'aojah
 for member in members:
     print(member)
     # Step 0; Load fwi data from CSV using pandas
-    df_obs = pd.read_csv('/scratch/cburton/scratch/FWI/2022/ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat')
-    df_sim = pd.read_csv('/scratch/cburton/scratch/FWI/2022/historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat')
+    df_obs = pd.read_csv(outputs_dat_dir + 'ERA5/Array/ERA5_ImpactsToolBox_Arr_'+Country+'1960-2013_'+str(percentile)+'%.dat')
+    df_sim = pd.read_csv(outputs_dat_dir + '/historical/Array/HadGEM3_Arr_'+Country+'1960-2013_'+member+'_'+str(percentile)+'%.dat')
     df_obs[np.isnan(df_obs)] = 0.000000000001
     df_sim[np.isnan(df_sim)] = 0.000000000001 
 
@@ -301,7 +305,7 @@ plt.grid(True)
 
 
 ######### Subplot (d) - Uncorrected 2022 ######### 
-'''
+
 ### First make the .dat files for hist and histnat (can run each one in paralell to save time) ###
 
 folder = '/scratch/cburton/scratch/FWI/2022/'
@@ -327,7 +331,7 @@ for member in members:
             hist = CountryPercentile(hist, percentile)
             hist = TimePercentile(hist, percentile)
             hist = np.ravel(hist.data)
-            f = open('/scratch/cburton/scratch/FWI/2022/hist/Array/'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat','a')
+            f = open(outputs_dat_dir + 'hist/Array/'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat','a')
             np.savetxt(f,(hist),newline=',',fmt='%s')
             f.write('\n')
             f.close()
@@ -363,7 +367,7 @@ for member in members:
             histnat = CountryPercentile(histnat, percentile)
             histnat = TimePercentile(histnat, percentile)
             histnat = np.ravel(histnat.data)
-            f = open('/scratch/cburton/scratch/FWI/2022/histnat/Array/'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat','a')
+            f = open(outputs_dat_dir + '/histnat/Array/'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat','a')
             np.savetxt(f,(histnat),newline=',',fmt='  %s')
             f.write('\n')
             f.close()
@@ -376,11 +380,10 @@ histnatarray = np.ravel(histnatarray)
 print(repr(histnatarray))
 exit()
 
-'''
 ### Then read in the .dat files and make the plot ###
 
-ALL = '/scratch/cburton/scratch/FWI/2022/hist/Array/'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat'
-NAT = '/scratch/cburton/scratch/FWI/2022/histnat/Array/'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat'
+ALL = outputs_dat_dir + 'hist/Array/'+Country+'_UNCORRECTED_hist'+str(percentile)+'%.dat'
+NAT = outputs_dat_dir + 'histnat/Array/'+Country+'_UNCORRECTED_histnat'+str(percentile)+'%.dat'
 
 All_array = []
 Nat_array = []
